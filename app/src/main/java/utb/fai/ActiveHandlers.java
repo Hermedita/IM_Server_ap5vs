@@ -21,8 +21,8 @@ public class ActiveHandlers {
     }
 
     /**
-     * add pøidá do mnoiny aktivních handlerù nový handler.
-     * Metoda je sychronizovaná, protoe HashSet neumí multithreading.
+     * add pøidá do mnoziny aktivních handlerù nový handler.
+     * Metoda je sychronizovaná, protoze HashSet neumí multithreading.
      * 
      * @param handler - reference na handler, který se má pøidat.
      * @return true if the set did not already contain the specified element.
@@ -32,8 +32,8 @@ public class ActiveHandlers {
     }
 
     /**
-     * remove odebere z mnoiny aktivních handlerù nový handler.
-     * Metoda je sychronizovaná, protoe HashSet neumí multithreading.
+     * remove odebere z mnoziny aktivních handlerù nový handler.
+     * Metoda je sychronizovaná, protoze HashSet neumí multithreading.
      * 
      * @param handler - reference na handler, který se má odstranit
      * @return true if the set did not already contain the specified element.

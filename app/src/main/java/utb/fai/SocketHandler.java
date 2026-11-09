@@ -2,9 +2,13 @@ package utb.fai;
 
 import java.io.*;
 import java.net.*;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.*;
 
 public class SocketHandler {
+	volatile String name = null;
+	Set<String> groups = ConcurrentHashMap.newKeySet();
 	/** mySocket je socket, o který se bude tento SocketHandler starat */
 	Socket mySocket;
 
@@ -45,6 +49,103 @@ public class SocketHandler {
 		this.mySocket = mySocket;
 		clientID = mySocket.getInetAddress().toString() + ":" + mySocket.getPort();
 		this.activeHandlers = activeHandlers;
+		groups.add("public");
+	}
+
+	// reply from server
+	private void reply(String text) {
+		if (!messages.offer(text))
+			System.err.printf("Client %s message queue is full, dropping the message!\n", clientID);
+	}
+
+		private void processLine(String request) {
+		String[] parts = request.split("\\s+", 2);
+		String vstup = parts[0];
+		String arg = parts.length > 1 ? parts[1].trim() : "";
+ 
+		// kdyz klient jeste nema jmeno
+		if (name == null) {
+			if (vstup.equals("#setMyName"))
+				setName(arg);
+			else if (vstup.startsWith("#"))
+				reply("Prvni si nastavte jmeno:");
+			else
+				setName(request); // jméno bez příkazu #setMyName
+			return;
+		}
+ 
+		switch (vstup) {
+			case "#setMyName":
+				setName(arg);
+				break;
+			case "#sendPrivate":
+				sendPrivate(arg);
+				break;
+			case "#join":
+				join(arg);
+				break;
+			case "#leave":
+				leave(arg);
+				break;
+			case "#groups":
+				reply(String.join(",", new TreeSet<String>(groups)));
+				break;
+			default:
+				if (vstup.startsWith("#"))
+					reply("Neznamy command: " + vstup);
+				else
+					activeHandlers.sendMessageToGroups(this, "[" + name + "] >> " + request);
+		}
+	}
+ 
+	private void setName(String candidate) {
+		if (candidate.isEmpty() || candidate.matches(".*\\s.*")) { 
+			//.* = libovolny pocet znaku
+			//\s = 1 whitespace
+			reply("Jmeno nesmi byt prazdne a nebo s mezerami. Vymyslete si jine:");
+		} else if (!activeHandlers.trySetName(this, candidate)) {
+			reply("Jmeno '" + candidate + "' je jiz zabrano. Vymyslete si jine:");
+		} else {
+			reply("Vase jmeno je: " + candidate);
+		}
+	}
+ 
+	private void sendPrivate(String arg) {
+		String[] p = arg.split("\\s+", 2);
+		//\s = 1 whitespace
+		//+ = za sebou
+		if (p.length < 2 || p[0].isEmpty() || p[1].trim().isEmpty()) {
+			reply("Argument #sendPrivate: <name> <message>");
+			return;
+		}
+		if (!activeHandlers.sendPrivate(p[0], "[" + name + "] >> " + p[1].trim()))
+			reply("User '" + p[0] + "' nenalezen.");
+	}
+ 
+	private void join(String room) {
+		if (room.isEmpty() || room.matches(".*\\s.*")) {
+			//.* = libovolny pocet znaku
+			//\s = 1 whitespace
+			reply("Argument #join: <room>");
+			return;
+		}
+		if (groups.add(room))
+			reply("Vstoupili jste do mistnosti " + room);
+		else
+			reply("Jiz jste v mistnosti " + room);
+	}
+ 
+	private void leave(String room) {
+		if (room.isEmpty() || room.matches(".*\\s.*")) {
+			//.* = libovolny pocet znaku
+			//\s = 1 whitespace
+			reply("Argument #leave: <room>");
+			return;
+		}
+		if (groups.remove(room))
+			reply("Opustili jste mistnost" + room);
+		else
+			reply("Nejste v mistnosti " + room);
 	}
 
 	class OutputHandler implements Runnable {
@@ -65,10 +166,8 @@ public class SocketHandler {
 					System.err.println("DBG>Message sent to " + clientID + ":" + m + "\n");
 				}
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			System.err.println("DBG>Output handler for " + clientID + " has finished.");
@@ -94,7 +193,7 @@ public class SocketHandler {
 					// ano - posli ji vsem ostatním klientùm
 					request = "From client " + clientID + ": " + request;
 					System.out.println(request);
-					activeHandlers.sendMessageToAll(SocketHandler.this, request);
+					activeHandlers.sendMessageToGroups(SocketHandler.this, request);
 				}
 				inputFinished = true;
 				messages.offer("OutputHandler, wakeup and die!");

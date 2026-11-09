@@ -55,10 +55,10 @@ public class SocketHandler {
 	// reply from server
 	private void reply(String text) {
 		if (!messages.offer(text))
-			System.err.printf("Client %s message queue is full, dropping the message!\n", clientID);
+			System.err.printf("Fronta zprav je plna!\n", clientID);
 	}
 
-		private void processLine(String request) {
+	private void processLine(String request) {
 		String[] parts = request.split("\\s+", 2);
 		String vstup = parts[0];
 		String arg = parts.length > 1 ? parts[1].trim() : "";
@@ -143,7 +143,7 @@ public class SocketHandler {
 			return;
 		}
 		if (groups.remove(room))
-			reply("Opustili jste mistnost" + room);
+			reply("Opustili jste mistnost " + room);
 		else
 			reply("Nejste v mistnosti " + room);
 	}
@@ -187,13 +187,19 @@ public class SocketHandler {
 				 * v okamziku, kdy nás Thread pool spustí, pridáme se do mnoziny
 				 * vsech aktivních handlerù, aby chodily zprávy od ostatních i nám
 				 */
-				activeHandlers.add(SocketHandler.this);
+				//activeHandlers.add(SocketHandler.this);
+				reply("Zadejte sve jmeno: ");
 				BufferedReader reader = new BufferedReader(new InputStreamReader(mySocket.getInputStream(), "UTF-8"));
-				while ((request = reader.readLine()) != null) { // prisla od mého klienta nìjaká zpráva?
+				while ((request = reader.readLine()) != null) { 
+					request = request.trim();
+					if (request.isEmpty())
+						continue;
+					
+					// prisla od mého klienta nìjaká zpráva?
 					// ano - posli ji vsem ostatním klientùm
-					request = "From client " + clientID + ": " + request;
-					System.out.println(request);
-					activeHandlers.sendMessageToGroups(SocketHandler.this, request);
+					//request = "From client " + clientID + ": " + request;
+					System.out.println("From client " + clientID + ": " + request);
+					//activeHandlers.sendMessageToGroups(SocketHandler.this, request);
 				}
 				inputFinished = true;
 				messages.offer("OutputHandler, wakeup and die!");

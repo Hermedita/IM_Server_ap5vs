@@ -187,7 +187,7 @@ public class SocketHandler {
 				 * v okamziku, kdy nás Thread pool spustí, pridáme se do mnoziny
 				 * vsech aktivních handlerù, aby chodily zprávy od ostatních i nám
 				 */
-				//activeHandlers.add(SocketHandler.this);
+				activeHandlers.add(SocketHandler.this);
 				reply("Zadejte sve jmeno: ");
 				BufferedReader reader = new BufferedReader(new InputStreamReader(mySocket.getInputStream(), "UTF-8"));
 				while ((request = reader.readLine()) != null) { 
@@ -199,6 +199,7 @@ public class SocketHandler {
 					// ano - posli ji vsem ostatním klientùm
 					//request = "From client " + clientID + ": " + request;
 					System.out.println("From client " + clientID + ": " + request);
+					processLine(request);
 					//activeHandlers.sendMessageToGroups(SocketHandler.this, request);
 				}
 				inputFinished = true;
